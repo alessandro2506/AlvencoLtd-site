@@ -11,9 +11,10 @@ import { isContactTopic, sanitizeText } from "@/lib/contact";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const transporter = nodemailer.createTransport({
-  host: "smtps.aruba.it",
-  port: 465,
-  secure: true,
+  host: "smtp.ionos.co.uk",
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -21,9 +22,10 @@ const transporter = nodemailer.createTransport({
 });
 
 const transporterNoReply = nodemailer.createTransport({
-  host: "smtps.aruba.it",
-  port: 465,
-  secure: true,
+  host: "smtp.ionos.co.uk",
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.SMTP_NOREPLY_USER,
     pass: process.env.SMTP_NOREPLY_PASS,
@@ -48,13 +50,9 @@ export async function POST(request: Request) {
   const from = process.env.SMTP_USER?.trim();
   const noReplyFrom = process.env.SMTP_NOREPLY_USER?.trim();
 
-  if (
-    !to ||
-    !from ||
-    !process.env.SMTP_PASS ||
-    !noReplyFrom ||
-    !process.env.SMTP_NOREPLY_PASS
-  ) {
+  const envOk = !!to && !!from && !!process.env.SMTP_PASS;
+  const noReplyEnabled = !!noReplyFrom && !!process.env.SMTP_NOREPLY_PASS;
+  if (!envOk) {
     return NextResponse.json(
       { error: fallbackErrors.config },
       { status: 503 },
@@ -156,18 +154,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: errors.sendFailed }, { status: 502 });
   }
 
-  try {
-    await transporterNoReply.sendMail({
-      from: `"Quantum Code Technologies Ltd" <${noReplyFrom}>`,
-      to: email,
-      subject:
-        uiLocale === "en"
-          ? "We received your enquiry — QC Tech"
-          : "Abbiamo ricevuto la tua richiesta — QC Tech",
-      html: autoReplyHtml,
-    });
-  } catch (err) {
-    console.error("[contact] SMTP autoreply:", err);
+  if (noReplyEnabled) {
+    try {
+      await transporterNoReply.sendMail({
+        from: `"Quantum Code Technologies Ltd" <${noReplyFrom}>`,
+        to: email,
+        subject:
+          uiLocale === "en"
+            ? "We received your enquiry — QC Tech"
+            : "Abbiamo ricevuto la tua richiesta — QC Tech",
+        html: autoReplyHtml,
+      });
+    } catch (err) {
+      console.error("[contact] SMTP autoreply:", err);
+    }
   }
 
   return NextResponse.json({ ok: true });

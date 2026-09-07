@@ -58,7 +58,7 @@ DEEPL_AUTH_KEY=
 
 Note:
 
-- `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO_EMAIL` servono per la mail interna al team; `SMTP_NOREPLY_USER`, `SMTP_NOREPLY_PASS` per l’auto-reply al cliente (SMTP Aruba `smtps.aruba.it:465`). Non committare mai le password.
+- `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO_EMAIL` servono per la mail interna al team; `SMTP_NOREPLY_USER`, `SMTP_NOREPLY_PASS` per l’auto-reply al cliente (SMTP IONOS `smtp.ionos.co.uk:587` STARTTLS). Non committare mai le password.
 - In Vercel i nomi devono combaciare esattamente con quelli sopra. Rimuovi le vecchie variabili Resend se presenti.
 - `DEEPL_AUTH_KEY` serve solo per lo script locale di traduzione.
 
@@ -80,6 +80,17 @@ npm run i18n:deepl
 - Favicon precedente conservato: `app/favicon-old.ico`
 
 ## Changelog sintetico (ultimi update)
+
+- **05 Agosto 2026 — Debug produzione + fix SEO/form (commit `e9771c9`, deploy Vercel READY)**
+  - Audit live su `qc-tech.co.uk`: canonical errati sulle pagine interne, title duplicati (`| QC Tech | QC Tech`), blog index con metadata homepage, assenza redirect `qc-tech.co.uk` → www, form contatti 502 quando Aruba rifiuta l'auto-reply
+  - Nuovo helper `lib/seo.ts` con `buildAlternates()` per canonical/hreflang per-pagina (IT/EN con path localizzati)
+  - Layout: rimossi canonical/hreflang globali ereditati dalla homepage; ogni pagina definisce i propri alternates
+  - Fix title template: rimosso suffisso `| QC Tech` dai title pagina in `messages/*.json` (il template layout lo aggiunge)
+  - Aggiunto `generateMetadata` su homepage e blog index; metadata blog: `Digital Growth Blog | QC Tech`
+  - Redirect 301 bare domain → www in `next.config.ts`
+  - Rimosso `SearchAction` da `components/schema-org.tsx` (ricerca non implementata)
+  - `/api/contact` e `/api/copilot-lead`: auto-reply SMTP separata dall'invio interno (lead salvato anche se conferma cliente fallisce); errori pre-body localizzati via Referer/Accept-Language
+  - Verifica post-deploy: canonical `/en/services` e `/en/blog` corretti; redirect 308 non-www → www attivo
 
 - Pagina FAQ dedicata con 15 domande/risposte in IT/EN, accordion Framer Motion, Schema.org FAQPage
 - Pagina Vision/About riscritta con contenuto reale: story, team, valori, CTA
@@ -156,6 +167,16 @@ Prima del deploy:
 - PMI locali Hertfordshire senza sito o con sito obsoleto
 
 **CTA principale**: "Free site audit" (EN) / "Audit gratuito del sito" (IT)
+
+## Changelog SEO (Agosto 2026)
+- Debug approfondito produzione (`qc-tech.co.uk`): canonical interne puntavano alla homepage, title duplicati, blog index senza metadata dedicati, duplicazione www/non-www, form contatti 502 su auto-reply SMTP rifiutata da Aruba
+- Introdotto `lib/seo.ts` (`buildAlternates`) per canonical e hreflang corretti su ogni pagina
+- Rimossi alternates globali dal layout; metadata per-pagina su homepage, servizi, vision, contatti, FAQ, blog, privacy, termini, progetti, copilot-ltd
+- Corretti title pagina in `messages/en.json` e `messages/it.json` (niente doppio `| QC Tech`)
+- Redirect 301 `qc-tech.co.uk` → `www.qc-tech.co.uk` in `next.config.ts`
+- Rimosso `SearchAction` non funzionante da Schema.org
+- Form/API: auto-reply separata dall'email interna; errori API localizzati EN/IT
+- Commit `e9771c9` — push `origin/main` + `qctech/main` — deploy Vercel production READY
 
 ## Changelog SEO (Aprile 2026)
 - Aggiunta sitemap dinamica con hreflang IT/EN

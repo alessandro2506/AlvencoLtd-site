@@ -646,3 +646,36 @@ Vercel farà il deploy automaticamente.
 - Tailwind CSS 4 — non usare sintassi v3 (es. `bg-opacity-50` è deprecata, usa `bg-black/50`)
 - Tutti i testi visibili all'utente devono passare per i file `messages/` — mai testo hardcoded nei componenti
 - Verificare sempre che le nuove chiavi JSON siano presenti in ENTRAMBI i file `it.json` e `en.json`
+
+---
+
+## 9. Changelog interventi eseguiti
+
+### Agosto 2026 — Debug produzione e fix SEO/form
+
+**Data:** 05/08/2026  
+**Commit:** `e9771c9`  
+**Deploy:** Vercel production READY (`dpl_HYVkvSsm1sZHm5GU6gBx87qbEBCG`)
+
+**Contesto:** audit live del sito in produzione con verifica browser, API, metadata, redirect e log Vercel Runtime.
+
+**Problemi rilevati:**
+- Canonical e hreflang delle pagine interne ereditavano la homepage dal layout
+- Title duplicati (`Services | QC Tech | QC Tech`) per stacking template + suffisso nei messaggi
+- Pagina `/en/blog` con title e canonical della homepage
+- `qc-tech.co.uk` e `www.qc-tech.co.uk` entrambi in 200 (contenuto duplicato)
+- `/api/contact` restituiva 502 quando Aruba rifiutava l'auto-reply al cliente (email interna già inviata)
+- `SearchAction` in JSON-LD senza funzionalità di ricerca reale
+- Errori API pre-body sempre in italiano anche su sito EN
+
+**Interventi:**
+- Creato `lib/seo.ts` con `getLocalizedPath()` e `buildAlternates()`
+- Aggiornati metadata di tutte le pagine principali + homepage + blog index
+- Redirect 301 bare domain → www in `next.config.ts`
+- Separazione invio interno / auto-reply in `app/api/contact/route.ts` e `app/api/copilot-lead/route.ts`
+- Rimosso `potentialAction` SearchAction da `components/schema-org.tsx`
+
+**Verifica post-deploy:**
+- `https://www.qc-tech.co.uk/en/services` → canonical `.../en/services`
+- `https://www.qc-tech.co.uk/en/blog` → title `Digital Growth Blog | QC Tech`
+- `https://qc-tech.co.uk/en/services` → 308 → www
