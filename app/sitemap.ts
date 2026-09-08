@@ -1,41 +1,59 @@
 import type { MetadataRoute } from "next";
+import { getPostBySlug, getPostSlugs } from "@/lib/blog";
 
-const blogSlugs = [
-  "digital-marketing-for-bb-and-guesthouses-uk",
-  "how-logistics-companies-can-use-web-portals-to-serve-clients",
-  "how-much-does-a-website-cost-uk-2026",
-  "how-to-attract-international-tourists-to-uk-experiences",
-  "react-native-vs-flutter-for-mobile-apps-2026",
-] as const;
+const baseUrl = "https://www.qc-tech.co.uk";
+
+/** Last real content update for core pages (not regenerated on every deploy). */
+const CORE_LASTMOD = new Date("2026-08-05T00:00:00.000Z");
+
+function parsePostDate(date: string): Date {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? CORE_LASTMOD : parsed;
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://www.qc-tech.co.uk";
-
   const itPages = [
-    { path: "/it", priority: 1.0, freq: "weekly" },
-    { path: "/it/servizi", priority: 0.8, freq: "monthly" },
-    { path: "/it/vision", priority: 0.8, freq: "monthly" },
-    { path: "/it/faq", priority: 0.7, freq: "monthly" },
-    { path: "/it/blog", priority: 0.9, freq: "weekly" },
-    { path: "/it/contatti", priority: 0.8, freq: "monthly" },
-    { path: "/it/copilot-ltd", priority: 0.7, freq: "monthly" },
-    { path: "/it/progetti", priority: 0.8, freq: "monthly" },
-    { path: "/it/privacy", priority: 0.5, freq: "yearly" },
-    { path: "/it/termini", priority: 0.5, freq: "yearly" },
+    { path: "/it", priority: 1.0, freq: "weekly" as const },
+    { path: "/it/servizi", priority: 0.8, freq: "monthly" as const },
+    { path: "/it/vision", priority: 0.8, freq: "monthly" as const },
+    { path: "/it/faq", priority: 0.7, freq: "monthly" as const },
+    { path: "/it/blog", priority: 0.9, freq: "weekly" as const },
+    { path: "/it/contatti", priority: 0.8, freq: "monthly" as const },
+    { path: "/it/copilot-ltd", priority: 0.7, freq: "monthly" as const },
+    { path: "/it/progetti", priority: 0.8, freq: "monthly" as const },
+    { path: "/it/privacy", priority: 0.5, freq: "yearly" as const },
+    { path: "/it/termini", priority: 0.5, freq: "yearly" as const },
   ];
 
   const enPages = [
-    { path: "/en", priority: 1.0, freq: "weekly" },
-    { path: "/en/services", priority: 0.8, freq: "monthly" },
-    { path: "/en/about", priority: 0.8, freq: "monthly" },
-    { path: "/en/faq", priority: 0.7, freq: "monthly" },
-    { path: "/en/blog", priority: 0.9, freq: "weekly" },
-    { path: "/en/contacts", priority: 0.8, freq: "monthly" },
-    { path: "/en/copilot-ltd", priority: 0.7, freq: "monthly" },
-    { path: "/en/projects", priority: 0.8, freq: "monthly" },
-    { path: "/en/privacy", priority: 0.5, freq: "yearly" },
-    { path: "/en/terms", priority: 0.5, freq: "yearly" },
+    { path: "/en", priority: 1.0, freq: "weekly" as const },
+    { path: "/en/services", priority: 0.8, freq: "monthly" as const },
+    { path: "/en/about", priority: 0.8, freq: "monthly" as const },
+    { path: "/en/faq", priority: 0.7, freq: "monthly" as const },
+    { path: "/en/blog", priority: 0.9, freq: "weekly" as const },
+    { path: "/en/contacts", priority: 0.8, freq: "monthly" as const },
+    { path: "/en/copilot-ltd", priority: 0.7, freq: "monthly" as const },
+    { path: "/en/projects", priority: 0.8, freq: "monthly" as const },
+    { path: "/en/privacy", priority: 0.5, freq: "yearly" as const },
+    { path: "/en/terms", priority: 0.5, freq: "yearly" as const },
   ];
+
+  const itSlugs = getPostSlugs("it");
+  const enSlugs = getPostSlugs("en");
+  const allSlugs = [...new Set([...itSlugs, ...enSlugs])];
+
+  const latestPostDate = allSlugs.reduce((latest, slug) => {
+    const itDate = getPostBySlug(slug, "it")?.date;
+    const enDate = getPostBySlug(slug, "en")?.date;
+    const candidates = [itDate, enDate]
+      .filter(Boolean)
+      .map((d) => parsePostDate(d as string));
+    const max = candidates.reduce(
+      (acc, d) => (d > acc ? d : acc),
+      latest,
+    );
+    return max;
+  }, CORE_LASTMOD);
 
   const entries: MetadataRoute.Sitemap = [];
 
@@ -67,10 +85,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
                 ? "/terms"
                 : normalizedPath;
 
+    const isBlogIndex = normalizedPath === "/blog";
+
     entries.push({
       url: `${baseUrl}${page.path}`,
-      lastModified: new Date(),
-      changeFrequency: page.freq as "weekly" | "monthly",
+      lastModified: isBlogIndex ? latestPostDate : CORE_LASTMOD,
+      changeFrequency: page.freq,
       priority: page.priority,
       alternates: {
         languages: {
@@ -82,11 +102,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  for (const slug of blogSlugs) {
-    for (const locale of ["it", "en"] as const) {
+  for (const slug of allSlugs) {
+    const itPost = itSlugs.includes(slug) ? getPostBySlug(slug, "it") : null;
+    const enPost = enSlugs.includes(slug) ? getPostBySlug(slug, "en") : null;
+
+    if (itPost) {
       entries.push({
-        url: `${baseUrl}/${locale}/blog/${slug}`,
-        lastModified: new Date(),
+        url: `${baseUrl}/it/blog/${slug}`,
+        lastModified: parsePostDate(itPost.date),
+        changeFrequency: "monthly",
+        priority: 0.7,
+        alternates: {
+          languages: {
+            it: `${baseUrl}/it/blog/${slug}`,
+            en: `${baseUrl}/en/blog/${slug}`,
+            "x-default": `${baseUrl}/en/blog/${slug}`,
+          },
+        },
+      });
+    }
+
+    if (enPost) {
+      entries.push({
+        url: `${baseUrl}/en/blog/${slug}`,
+        lastModified: parsePostDate(enPost.date),
         changeFrequency: "monthly",
         priority: 0.7,
         alternates: {
